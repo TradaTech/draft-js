@@ -223,12 +223,17 @@ const DraftEditorCompositionHandler = {
     );
     const compositionEndSelectionState = documentSelection.selectionState;
 
-    editor.restoreEditorDOM();
-
     const editorStateWithUpdatedSelection = EditorState.acceptSelection(
       editorState,
       compositionEndSelectionState,
     );
+
+    const anchorKey = compositionEndSelectionState.getAnchorKey();
+    const focusKey = compositionEndSelectionState.getFocusKey();
+
+    anchorKey === focusKey
+      ? editor.restoreBlockDOM(anchorKey)
+      : editor.restoreEditorDOM();
 
     editor.update(
       EditorState.push(

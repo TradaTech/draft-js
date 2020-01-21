@@ -16,6 +16,7 @@ import type {BlockMap} from 'BlockMap';
 import type {DraftEditorModes} from 'DraftEditorModes';
 import type {DraftEditorDefaultProps, DraftEditorProps} from 'DraftEditorProps';
 import type {DraftScrollPosition} from 'DraftScrollPosition';
+import type {BlockKeyMap} from 'BlockKeyMap';
 
 const DefaultDraftBlockRenderMap = require('DefaultDraftBlockRenderMap');
 const DefaultDraftInlineStyle = require('DefaultDraftInlineStyle');
@@ -40,6 +41,7 @@ const gkx = require('gkx');
 const invariant = require('invariant');
 const isHTMLElement = require('isHTMLElement');
 const nullthrows = require('nullthrows');
+const {Map} = require('immutable');
 
 const isIE = UserAgent.isBrowser('IE');
 
@@ -59,6 +61,7 @@ const handlerMap = {
 
 type State = {
   contentsKey: number,
+  blockKeyMap: BlockKeyMap,
 };
 
 let didInitODS = false;
@@ -190,6 +193,7 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
   setMode: (mode: DraftEditorModes) => void;
   exitCurrentMode: () => void;
   restoreEditorDOM: (scrollPosition?: DraftScrollPosition) => void;
+  restoreBlockDOM: (key: string, scrollPosition?: DraftScrollPosition) => void;
   setClipboard: (clipboard: ?BlockMap) => void;
   getClipboard: () => ?BlockMap;
   getEditorKey: () => string;
@@ -253,8 +257,8 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
       });
     }
 
-    // See `restoreEditorDOM()`.
-    this.state = {contentsKey: 0};
+    // See `restoreEditorDOM()` and `restoreBlockDOM()`
+    this.state = {contentsKey: 0, blockKeyMap: new Map({})};
   }
 
   /**
@@ -323,6 +327,8 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
       textDirectionality,
     } = this.props;
 
+    const {blockKeyMap} = this.state;
+
     const rootClass = cx({
       'DraftEditor/root': true,
       'DraftEditor/alignLeft': textAlignment === 'left',
@@ -360,6 +366,7 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
       editorKey: this._editorKey,
       editorState,
       textDirectionality,
+      blockKeyMap,
     };
 
     return (
@@ -576,6 +583,29 @@ class DraftEditor extends React.Component<DraftEditorProps, State> {
     this.setState({contentsKey: this.state.contentsKey + 1}, () => {
       this.focus(scrollPosition);
     });
+  };
+
+  /**
+   * Used via `this.restoreBlockDOM()`.
+   * Force a complete re-render of the DraftEditorBlock in DraftEditorContents
+   * Search for a block with the specified block key and re-render it.
+   */
+  restoreBlockDOM: (
+    key: string,
+    scrollPosition?: DraftScrollPosition,
+  ) => void = (key: string, scrollPosition?: DraftScrollPosition): void => {
+    const {blockKeyMap} = this.state;
+    this.setState(
+      {
+        blockKeyMap: blockKeyMap.set(
+          key,
+          blockKeyMap.has(key) ? blockKeyMap.get(key) + 1 : 1,
+        ),
+      },
+      () => {
+        this.focus(scrollPosition);
+      },
+    );
   };
 
   /**
