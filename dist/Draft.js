@@ -10312,11 +10312,21 @@ var DraftEditorCompositionHandler = {
 
     var documentSelection = getDraftEditorSelection(editorState, getContentEditableContainer(editor));
     var compositionEndSelectionState = documentSelection.selectionState;
-    var editorStateWithUpdatedSelection = EditorState.acceptSelection(editorState, compositionEndSelectionState);
     var anchorKey = compositionEndSelectionState.getAnchorKey();
     var focusKey = compositionEndSelectionState.getFocusKey();
     anchorKey === focusKey ? editor.restoreBlockDOM(anchorKey) : editor.restoreEditorDOM();
-    editor.update(EditorState.push(editorStateWithUpdatedSelection, contentState, 'insert-characters'));
+    var newState = EditorState.push(editorState, contentState, 'insert-characters');
+    editor.update(newState); // restore selection
+
+    var block = contentState.getBlockForKey(focusKey);
+    if (!block) return;
+
+    if (block.getType() === 'image' && block.getText().length > compositionEndSelectionState.getFocusOffset()) {
+      setTimeout(function () {
+        var editorStateWithUpdatedSelection = EditorState.forceSelection(newState, compositionEndSelectionState);
+        editor.update(editorStateWithUpdatedSelection);
+      }, 50);
+    }
   }
 };
 module.exports = DraftEditorCompositionHandler;

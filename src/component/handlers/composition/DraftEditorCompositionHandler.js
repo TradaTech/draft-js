@@ -223,11 +223,6 @@ const DraftEditorCompositionHandler = {
     );
     const compositionEndSelectionState = documentSelection.selectionState;
 
-    const editorStateWithUpdatedSelection = EditorState.acceptSelection(
-      editorState,
-      compositionEndSelectionState,
-    );
-
     const anchorKey = compositionEndSelectionState.getAnchorKey();
     const focusKey = compositionEndSelectionState.getFocusKey();
 
@@ -235,13 +230,28 @@ const DraftEditorCompositionHandler = {
       ? editor.restoreBlockDOM(anchorKey)
       : editor.restoreEditorDOM();
 
-    editor.update(
-      EditorState.push(
-        editorStateWithUpdatedSelection,
-        contentState,
-        'insert-characters',
-      ),
+    const newState = EditorState.push(
+      editorState,
+      contentState,
+      'insert-characters',
     );
+    editor.update(newState);
+
+    // restore selection
+    const block = contentState.getBlockForKey(focusKey);
+    if (!block) return;
+    if (
+      block.getType() === 'image' &&
+      block.getText().length > compositionEndSelectionState.getFocusOffset()
+    ) {
+      setTimeout(() => {
+        const editorStateWithUpdatedSelection = EditorState.forceSelection(
+          newState,
+          compositionEndSelectionState,
+        );
+        editor.update(editorStateWithUpdatedSelection);
+      }, 50);
+    }
   },
 };
 
